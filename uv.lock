@@ -1199,6 +1199,7 @@ dependencies = [
     { name = "playwright-stealth" },
     { name = "prefect" },
     { name = "pymongo" },
+    { name = "python-dotenv" },
     { name = "streamlit" },
 ]
 
@@ -1211,6 +1212,7 @@ requires-dist = [
     { name = "playwright-stealth", specifier = ">=2.0.3" },
     { name = "prefect", specifier = ">=3.6.25" },
     { name = "pymongo", specifier = ">=4.16.0" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "streamlit", specifier = ">=1.56.0" },
 ]
 

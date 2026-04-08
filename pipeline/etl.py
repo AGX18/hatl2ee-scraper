@@ -2,9 +2,14 @@ from prefect import flow, task, get_run_logger
 
 from playwright.sync_api import sync_playwright
 
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 @task(name="scrape-hatla2ee", retries=2)
-def scrape(max_pages: int = 5):
+def scrape(max_pages: int = 1):
     logger = get_run_logger()
     results = []
 
@@ -73,7 +78,34 @@ def clean(raw_data):
 
 @task
 def enrich(clean_data):
-    pass
+    logger = get_run_logger()
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    enriched = []
+
+    for listing in clean_data[:3]:
+        prompt = f"""
+Given this car listing: {listing}
+Return a JSON object with these fields:
+- condition: "new" or "used"
+- price_category: "budget", "mid-range", or "premium"
+- city: extracted city name in English
+- make: car brand in English
+- model: car model in English
+Return only valid JSON, no explanation.
+"""
+        response = client.chat.completions.create(
+            model="gpt-5.4-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        import json
+        gpt_data = json.loads(response.choices[0].message.content)
+        enriched.append({**listing, **gpt_data})
+
+    logger.info(f"Enriched {len(enriched)} listings")
+    logger.info(str(enriched[0]))
+    return enriched
 
 @task
 def store(enriched_data):
