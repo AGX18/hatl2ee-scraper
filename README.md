@@ -8,3 +8,7 @@ Task 4: store()       → save to MongoDB
 
 start the server
 `uv run prefect server start`
+
+## ETL pipeline
+
+`Hatla2ee links → CarCrawler → structured car data → storage`
