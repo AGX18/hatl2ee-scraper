@@ -13,19 +13,21 @@ def scrape(max_pages: int = 5):
         context = browser.new_context()
         page = context.new_page()
 
-        page.goto("https://eg.hatla2ee.com/ar/car/search")
-        page.wait_for_timeout(8000)
+        for page_num in range(1, max_pages + 1):
+            url = f"https://eg.hatla2ee.com/ar/car/search?page={page_num}"
+            page.goto(url)
+            page.wait_for_timeout(8000)
 
-        cards = page.query_selector_all("div[data-slot='card']")
-        for card in cards:
-            text = card.inner_text()
-            if "جنيه" not in text and "EGP" not in text:
-                continue
-            
-            lines = [l.strip() for l in text.splitlines() if l.strip()]
-            results.append({"raw_lines": lines})
+            cards = page.query_selector_all("div[data-slot='card']")
 
-        logger.info(f"Extracted {len(results)} listings")
+            for card in cards:
+                text = card.inner_text()
+                if "جنيه" not in text and "EGP" not in text:
+                    continue
+                lines = [l.strip() for l in text.splitlines() if l.strip()]
+                results.append({"raw_lines": lines, "page": page_num})
+
+            logger.info(f"Page {page_num}: extracted {len(results)} total listings so far")
 
         browser.close()
 
