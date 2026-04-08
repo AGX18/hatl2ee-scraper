@@ -35,7 +35,28 @@ def scrape(max_pages: int = 5):
 
 @task
 def clean(raw_data):
-    pass
+    logger = get_run_logger()
+    cleaned = []
+
+    for listing in raw_data:
+        lines = listing.get("raw_lines", [])
+
+        price = next((l for l in lines if "جنيه" in l or "EGP" in l), None)
+        year = next((l for l in lines if l.isdigit() and len(l) == 4), None)
+        mileage = next((l for l in lines if "کم" in l or "كم" in l), None)
+
+        cleaned.append({
+            "raw_lines": lines,
+            "price": price,
+            "year": year,
+            "mileage": mileage,
+            "page": listing.get("page")
+        })
+
+    logger.info(f"Cleaned {len(cleaned)} listings")
+    logger.info(str(cleaned[0]))
+    logger.info(str(cleaned[1]))
+    return cleaned
 
 @task
 def enrich(clean_data):
