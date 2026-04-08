@@ -41,22 +41,35 @@ def clean(raw_data):
     for listing in raw_data:
         lines = listing.get("raw_lines", [])
 
-        price = next((l for l in lines if "جنيه" in l or "EGP" in l), None)
+        price_raw = next((l for l in lines if "جنيه" in l or "EGP" in l), None)
         year = next((l for l in lines if l.isdigit() and len(l) == 4), None)
         mileage = next((l for l in lines if "کم" in l or "كم" in l), None)
+        transmission = next((l for l in lines if "أتوماتيك" in l or "مانيوال" in l), None)
+        fuel = next((l for l in lines if l in ["بنزين", "ديزل", "كهرباء", "هجين"]), None)
+        location = next((l for l in lines if "," in l and "جنيه" not in l), None)
+
+
+        title_line = next((l for l in lines if any(c.isdigit() for c in l) and len(l) > 6 and "کم" not in l and "جنيه" not in l and "عرض" not in l and "Next" not in l and "/" not in l), None)
+
+        price_num = None
+        if price_raw:
+            price_num = int(price_raw.replace(",", "").replace("جنيه", "").replace("EGP", "").strip())
 
         cleaned.append({
-            "raw_lines": lines,
-            "price": price,
-            "year": year,
+            "title": title_line,
+            "price": price_num,
+            "year": int(year) if year else None,
             "mileage": mileage,
+            "transmission": transmission,
+            "fuel": fuel,
+            "location": location,
             "page": listing.get("page")
         })
 
     logger.info(f"Cleaned {len(cleaned)} listings")
     logger.info(str(cleaned[0]))
-    logger.info(str(cleaned[1]))
     return cleaned
+
 
 @task
 def enrich(clean_data):
