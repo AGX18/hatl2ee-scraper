@@ -8,14 +8,11 @@ def find_api():
         page = context.new_page()
 
 
+
         def log_response(response):
             if "_search" in response.url:
-                try:
-                    body = response.json()
-                    if body.get("hits", {}).get("total", {}).get("value", 0) > 0:
-                        print(body)
-                except:
-                    pass
+                print("REQUEST HEADERS:", dict(response.request.headers))
+                page.wait_for_timeout(1000)
 
         page.on("response", log_response)
         page.goto("https://eg.hatla2ee.com/ar/car/search")

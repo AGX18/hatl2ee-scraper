@@ -1,36 +1,33 @@
-from prefect import flow, task
+from prefect import flow, task, get_run_logger
 
-import httpx
+from playwright.sync_api import sync_playwright
+
 
 @task(name="scrape-hatla2ee", retries=2)
 def scrape(max_pages: int = 5):
-    # Send request → validate response → parse JSON → safely extract listings
+    logger = get_run_logger()
     results = []
-    page_size = 24
 
-    for page_num in range(max_pages):
-        query = {
-            "from": page_num * page_size,
-            "size": page_size,
-            "query": {"bool": {}},
-            "sort": [{"created_at": "desc"}]
-        }
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)
+        context = browser.new_context()
+        page = context.new_page()
 
-        response = httpx.post(
-            "https://eg.hatla2ee.com/api/search/hatla2ee_eg_listings_live/_search",
-            json=query,
-            timeout=10
-        )
-        
-        response.raise_for_status()
-        
-        data = response.json()
+        page.goto("https://eg.hatla2ee.com/ar/car/search")
+        page.wait_for_timeout(8000)
 
-        hits = data.get("hits", {}).get("hits", [])
-        if not hits:
-            break
-        results.extend(hits)
-        print(f"Page {page_num + 1}: fetched {len(hits)} listings")
+        cards = page.query_selector_all("div[data-slot='card']")
+        for card in cards:
+            text = card.inner_text()
+            if "جنيه" not in text and "EGP" not in text:
+                continue
+            
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            results.append({"raw_lines": lines})
+
+        logger.info(f"Extracted {len(results)} listings")
+
+        browser.close()
 
     return results
 
