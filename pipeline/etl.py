@@ -5,6 +5,8 @@ from playwright.sync_api import sync_playwright
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import hashlib
+import json
 
 load_dotenv()
 
@@ -51,7 +53,7 @@ def clean(raw_data):
         mileage = next((l for l in lines if "کم" in l or "كم" in l), None)
         transmission = next((l for l in lines if "أتوماتيك" in l or "مانيوال" in l), None)
         fuel = next((l for l in lines if l in ["بنزين", "ديزل", "كهرباء", "هجين"]), None)
-        location = next((l for l in lines if "," in l and "جنيه" not in l), None)
+        location = next((l for l in lines if "," in l and "جنيه" not in l and "کم" not in l and "كم" not in l), None)
 
 
         title_line = next((l for l in lines if any(c.isdigit() for c in l) and len(l) > 6 and "کم" not in l and "جنيه" not in l and "عرض" not in l and "Next" not in l and "/" not in l), None)
@@ -83,7 +85,7 @@ def enrich(clean_data):
 
     enriched = []
 
-    for listing in clean_data[:3]:
+    for listing in clean_data:
         prompt = f"""
 Given this car listing: {listing}
 Return a JSON object with these fields:
@@ -107,13 +109,69 @@ Return only valid JSON, no explanation.
     logger.info(str(enriched[0]))
     return enriched
 
+from pymongo import MongoClient
+
 @task
 def store(enriched_data):
-    pass
+    logger = get_run_logger()
+
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db = client["hatla2ee"]
+    collection = db["listings"]
+
+    upserted = 0
+    for listing in enriched_data:
+        listing["_id"] = make_id(listing)
+        result = collection.update_one(
+            {"_id": listing["_id"]},
+            {"$set": listing},
+            upsert=True
+        )
+        if result.upserted_id:
+            upserted += 1
+
+    logger.info(f"Stored {upserted} new listings, {len(enriched_data) - upserted} already existed")
+    client.close()
 
 @flow(name="hatla2ee-etl")
-def noon_pipeline(max_pages: int = 5):
+def hatla2ee_pipeline(max_pages: int = 5):
     raw = scrape(max_pages)
     cleaned = clean(raw)
     enriched = enrich(cleaned)
     store(enriched)
+    
+    
+    
+def setup_collection(db):
+    if "listings" not in db.list_collection_names():
+        db.create_collection("listings", validator={
+            "$jsonSchema": {
+                "bsonType": "object",
+                "required": ["title", "price", "year"],
+                "properties": {
+                    "title":        {"bsonType": "string"},
+                    "price":        {"bsonType": "int"},
+                    "year":         {"bsonType": "int"},
+                    "mileage":      {"bsonType": ["string", "null"]},
+                    "transmission": {"bsonType": ["string", "null"]},
+                    "fuel":         {"bsonType": ["string", "null"]},
+                    "location":     {"bsonType": ["string", "null"]},
+                    "condition":    {"bsonType": ["string", "null"]},
+                    "price_category": {"bsonType": ["string", "null"]},
+                    "city":         {"bsonType": ["string", "null"]},
+                    "make":         {"bsonType": ["string", "null"]},
+                    "model":        {"bsonType": ["string", "null"]},
+                }
+            }
+        })
+        
+        
+def make_id(listing):
+    key = {
+        "title": listing.get("title"),
+        "price": listing.get("price"),
+        "year": listing.get("year"),
+        "mileage": listing.get("mileage"),
+        "location": listing.get("location")
+    }
+    return hashlib.md5(json.dumps(key, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
