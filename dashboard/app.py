@@ -41,4 +41,4 @@ with col6:
     st.bar_chart(df["fuel"].value_counts())
     
 st.subheader("Listings by City")
-st.bar_chart(df["city"].value_counts().head(10))
+st.bar_chart(df["location"].value_counts().head(10))

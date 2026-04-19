@@ -42,7 +42,7 @@ if condition != "All":
 filtered = filtered[filtered["price"] <= price_range]
 
 filtered = filtered.sort_values("value_for_money", ascending=False)
-st.dataframe(filtered[["title", "make", "model", "year", "price", "mileage", "city", "condition", "value_for_money", "value_reasoning"]])
+st.dataframe(filtered[["title", "make", "model", "year", "price", "mileage", "location", "condition", "value_for_money", "value_reasoning"]])
 
 st.subheader("💰 Budget Finder")
 
@@ -65,4 +65,4 @@ else:
     st.subheader("⚠️ Cars to Avoid")
 
 worst = df.sort_values("value_for_money").head(10)
-st.dataframe(worst[["title", "make", "model", "year", "price", "mileage", "city", "value_for_money", "value_reasoning"]])
+st.dataframe(worst[["title", "make", "model", "year", "price", "mileage", "location", "value_for_money", "value_reasoning"]])
