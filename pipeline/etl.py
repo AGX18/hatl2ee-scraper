@@ -109,7 +109,9 @@ Return a JSON object with these fields:
 - city: extracted city name in English
 - make: car brand in English
 - model: car model in English
-- value_for_money: a score from 1 to 10 based on price, year, mileage, and condition. 10 means excellent deal, 1 means overpriced.
+- body_type: "sedan", "suv", "hatchback", "coupe", "truck", "van", or "unknown"
+- engine_size: engine displacement as a string e.g. "1.6L", "2.0T", or "unknown"
+- value_for_money: score from 1 to 10 based on price, year, mileage, and condition
 - value_reasoning: one sentence explaining the score in English
 Return only valid JSON, no explanation.
 """
