@@ -495,12 +495,27 @@ def store(enriched_data):
     logger.info(f"Stored {upserted} new listings, {len(enriched_data) - upserted} already existed")
     client.close()
 
+@task(name="train-price-model")
+def train_price_model():
+    logger = get_run_logger()
+    logger.info("Retraining AI price model with new data...")
+    import sys
+    import os
+    sys.path.append(os.getcwd())
+    try:
+        from train_model import main as train
+        train()
+        logger.info("AI model retrained successfully!")
+    except Exception as e:
+        logger.error(f"Failed to retrain AI model: {e}")
+
 @flow(name="hatla2ee-etl")
 def hatla2ee_pipeline(max_pages: int = 5):
     raw = scrape(max_pages)
     cleaned = clean(raw)
     enriched = enrich_locally(cleaned)
     store(enriched)
+    train_price_model()
 
 
     
