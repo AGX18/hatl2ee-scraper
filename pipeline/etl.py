@@ -307,7 +307,7 @@ def clean(raw_data):
         fuel = fuel_match.group(0) if fuel_match else None        
 
         cleaned.append({
-            "title": listing.get("title_attr"),
+            "title": re.sub(r"^Picture\s+", "", listing.get("title_attr", "")).strip(),
             "make": listing.get("make"),
             "model": listing.get("model"),
             "year": year,
