@@ -13,5 +13,6 @@ dependencies = [
     "prefect>=3.6.25",
     "pymongo>=4.16.0",
     "python-dotenv>=1.2.2",
+    "scikit-learn>=1.8.0",
     "streamlit>=1.56.0",
 ]
