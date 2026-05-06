@@ -482,6 +482,7 @@ def store(enriched_data):
 
     upserted = 0
     for listing in enriched_data:
+        listing["title"] = re.sub(r"^Picture\s+", "", listing.get("title", "")).strip()
         logger.info(f"{listing['title']} - {listing['body_type']}")
         listing["_id"] = make_id(listing)
         result = collection.update_one(
@@ -606,8 +607,42 @@ def backfill_unknown_body_types():
         print(f"Successfully updated {result.modified_count} listings.")
     else:
         print("No matches found to update.")
-        
-        
+
+
+def backfill_titles():
+    """One-time fix: strip leading 'Picture ' from all titles stored by old scraper runs."""
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db = client["hatla2ee"]
+    collection = db["listings"]
+
+    # Find all listings whose title still starts with 'Picture '
+    query = {"title": {"$regex": "^Picture "}}
+    affected = collection.count_documents(query)
+    print(f"Found {affected} listings with 'Picture' prefix in title.")
+
+    if affected == 0:
+        print("Nothing to fix.")
+        client.close()
+        return
+
+    # Use an aggregation pipeline update to strip the prefix in-place
+    result = collection.update_many(
+        query,
+        [{"$set": {"title": {
+            "$ltrim": {
+                "input": {"$replaceOne": {
+                    "input": "$title",
+                    "find": "Picture ",
+                    "replacement": ""
+                }}
+            }
+        }}}]
+    )
+    print(f"Successfully cleaned {result.modified_count} listing titles.")
+    client.close()
+
+
 if __name__ == "__main__":
     # Update the URI and Database name as needed
     backfill_unknown_body_types()
+    backfill_titles()
